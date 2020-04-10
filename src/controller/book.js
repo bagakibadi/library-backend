@@ -1,6 +1,9 @@
 const bookModel = require('../models/book');
 const MiscHelper = require('../helpers/helpers');
 const connection = require('../configs/db');
+const redis = require('redis');
+const client = redis.createClient(process.env.PORT_REDIS);
+
 module.exports = {
   getBooks: (req, res)=>{
     const search = req.query.search;
@@ -11,6 +14,7 @@ module.exports = {
     if (!page) {
       bookModel.getBooks(search, ascending, descending)
         .then((result)=>{
+          client.setex('getallbooks',3600 ,JSON.stringify(result))
           MiscHelper.response(res, result, 200);
         })
         .catch(err=> {
@@ -40,12 +44,12 @@ module.exports = {
       .catch(err => console.log(err));
   },
   insertBook: (req, res)=>{
-    const {title, description, author,image, status, id_category} = req.body;
+    const {title, description, author, status, id_category} = req.body;
     const data = {
       title,
       description,
       author,
-      image,
+      image:`http://localhost:8000/uploads/${req.file.filename}`,
       status,
       id_category,
       created_at: new Date()
